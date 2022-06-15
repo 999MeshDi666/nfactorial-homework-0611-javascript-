@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import "./App.css";
 
@@ -38,28 +38,43 @@ const toDoItems = [
 function App() {
   const [itemToAdd, setItemToAdd] = useState("");
   //arrow declaration => expensive computation ex: API calls
-  const [items, setItems] = useState(() => toDoItems);
+  const [items, setItems] = useState(JSON.parse(localStorage.getItem('saved_items'))?JSON.parse(localStorage.getItem('saved_items')):toDoItems);
+
+  // const [storage, setStorage] = useState(JSON.parse(localStorage.getItem('saved_items')));
 
   const [filterType, setFilterType] = useState("");
+
+  const [searchItem, setSearchItem] = useState("");
+
+  // React.useEffect(()=>{
+  //   localStorage.setItem('saved_items', JSON.stringify(storage))
+  // },[storage]);
 
   const handleChangeItem = (event) => {
     setItemToAdd(event.target.value);
   };
-
+  const handleSearchItem = (event) =>{
+    setSearchItem(event.target.value);
+  }
+ 
   const handleAddItem = () => {
-    // mutating !WRONG!
-    // const oldItems = items;
-    // oldItems.push({ label: itemToAdd, key: uuidv4() });
-    // setItems(oldItems);
-
-    // not mutating !CORRECT!
+    
     setItems((prevItems) => [
       { label: itemToAdd, key: uuidv4() },
       ...prevItems,
     ]);
 
     setItemToAdd("");
+  
+    
   };
+  const handleRemoveItem = (key) =>{
+    console.log(key);
+    const newList = items.filter((item)=> item.key !== key);
+    setItems(newList);
+    
+    localStorage.setItem('saved_items', JSON.stringify(newList))
+  }
 
   const handleItemDone = ({ key }) => {
     //first way
@@ -87,6 +102,17 @@ function App() {
     );
   };
 
+  const handleItemImportant= ({ key }) => {
+    
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.key === key) {
+          return { ...item, important: !item.important };
+        } else return item;
+      })
+    );
+  };
+
   const handleFilterItems = (type) => {
     setFilterType(type);
   };
@@ -101,6 +127,8 @@ function App() {
       : filterType === "active"
       ? items.filter((item) => !item.done)
       : items.filter((item) => item.done);
+   
+  const searchedItems = filteredItems.filter((item)=>item.label.includes(searchItem));
 
   return (
     <div className="todo-app">
@@ -116,8 +144,10 @@ function App() {
         {/* Search-panel */}
         <input
           type="text"
+          value = {searchItem}
           className="form-control search-input"
           placeholder="type to search"
+          onChange={handleSearchItem}
         />
         {/* Item-status-filter */}
         <div className="btn-group">
@@ -138,20 +168,24 @@ function App() {
 
       {/* List-group */}
       <ul className="list-group todo-list">
-        {filteredItems.length > 0 &&
-          filteredItems.map((item) => (
+       
+        {searchedItems.length > 0 &&
+          searchedItems.map((item) => (
             <li key={item.key} className="list-group-item">
-              <span className={`todo-list-item${item.done ? " done" : ""}`}>
+              <span className={`todo-list-item ${item.done ? " done" : ""} ${item.important ? " important" : ""}`}>
                 <span
                   className="todo-list-item-label"
                   onClick={() => handleItemDone(item)}
                 >
+                 
                   {item.label}
+                 
                 </span>
 
                 <button
                   type="button"
                   className="btn btn-outline-success btn-sm float-right"
+                  onClick={()=> handleItemImportant(item)}
                 >
                   <i className="fa fa-exclamation" />
                 </button>
@@ -159,6 +193,8 @@ function App() {
                 <button
                   type="button"
                   className="btn btn-outline-danger btn-sm float-right"
+                  onClick={()=> handleRemoveItem(item.key)}
+                 
                 >
                   <i className="fa fa-trash-o" />
                 </button>
